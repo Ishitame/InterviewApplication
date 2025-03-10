@@ -1,0 +1,34 @@
+else { %>
+                    <!-- Render Actual Slots -->
+                    <% schedules.slot.forEach(slot => { %>
+                        <div class="slot-card <%= slot.isBooked ? 'booked' : '' %>">
+                            <p><%= slot.date %> - <%= slot.startTime %> to <%= slot.endTime %></p>
+                            <p>Status: <strong><%= slot.isBooked ? "Booked" : "Available" %></strong></p>
+            
+                            <% if (!slot.isBooked) { %>
+                                <form action="/instructor/edit-slot/<%= slot._id %>" method="POST">
+                                    <input type="text" name="date" placeholder="New Date">
+                                    <input type="text" name="startTime" placeholder="New Start Time">
+                                    <input type="text" name="endTime" placeholder="New End Time">
+                                    <button type="submit">Edit</button>
+                                </form>
+                            <% } %>
+                        </div>
+                    <% }); %>
+                <% } %>
+
+                <!-- Available Slots Section -->
+        <!-- <section class="slots">
+            <h3>Your Slots</h3>
+            <div class="slots-container">
+                <% if (slots.length === 0) { %>
+                    <p class="empty-message">No schedules exist. Create a slot to get started.</p>
+                <% } else { %>
+                    <% slots.forEach(slot => { %>
+                        <div class="slot-card <%= slot.booked ? 'booked' : '' %>">
+                            <p><%= slot.time %> - <%= slot.booked ? "Booked" : "Available" %></p>
+                        </div>
+                    <% }); %>
+                <% } %>
+            </div>
+        </section> -->
