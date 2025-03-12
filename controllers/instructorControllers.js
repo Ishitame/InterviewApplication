@@ -71,7 +71,48 @@ exports.createController=async(req,res)=>{
 
 
 
+exports.getPendingBookings = async (req, res) => {
+    try {
+        const instructorId = req.user.id; 
+        const pendingBookings = await BookedSlot.find({ instructorId, status: 'pending' }).populate('studentId', 'name email');
 
+        res.status(200).json({ success: true, bookings: pendingBookings });
+    } catch (error) {
+        console.log(error);
+        
+        res.status(500).json({ success: false, message: 'Server Error', error });
+    }
+};
+
+
+
+exports.updateBookingStatus = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { status } = req.body;
+
+        if (!['confirmed', 'cancelled'].includes(status)) {
+            return res.status(400).json({ success: false, message: 'Invalid status value' });
+        }
+
+        const booking = await BookedSlot.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        if (booking.status !== 'pending') {
+            return res.status(400).json({ success: false, message: 'Booking is already processed' });
+        }
+
+        booking.status = status;
+        booking.isBooked = status === 'confirmed'; 
+        await booking.save();
+
+        res.status(200).json({ success: true, message: `Booking ${status} successfully`, booking });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server Error', error });
+    }
+};
 
 exports.getInstructorSlots = async (req, res) => {
     try {
@@ -79,7 +120,7 @@ exports.getInstructorSlots = async (req, res) => {
 
         
        
-        const bookedSlots = await BookedSlot.find({ instructorId,isBooked: true  });
+        const bookedSlots = await BookedSlot.find({ instructorId,status: "confirmed"  });
 
         res.status(200).json({
 
@@ -182,7 +223,8 @@ exports.cancelBookingInstructor = async (req, res) => {
         }
 
         
-        await BookedSlot.deleteOne({ _id: bookingId });
+    await BookedSlot.findByIdAndUpdate(bookingId, { status: "cancelled" });
+
 
         res.status(200).json({ message: "Booking canceled successfully by instructor" });
 
@@ -224,7 +266,7 @@ exports.submitFeedback = async (req, res) => {
         await feedback.save();
 
         
-        await BookedSlot.findByIdAndUpdate(bookingId, { isBooked: false });
+        await BookedSlot.findByIdAndUpdate(bookingId, { status: "completed" });
 
         res.status(201).json({ message: "Feedback submitted successfully, slot marked as inactive.", feedback });
     } catch (error) {
@@ -242,7 +284,7 @@ exports.pastInterviews=async(req,res)=>{
         const pastInterviews = await BookedSlot.find({
             instructorId,
             // date: { $lt: new Date() }
-            isBooked:false
+            status:"completed"
         })
         .populate("studentId", "name email") 
         .lean(); 

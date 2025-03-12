@@ -55,7 +55,7 @@ exports.bookSlot = async (req, res) => {
             date: new Date(date),
             startTime,
             endTime,
-            isBooked: true
+            status:"pending"
         });
 
         await newBooking.save();
@@ -102,18 +102,20 @@ exports.getAvailableSlots = async (req, res) => {
         const bookedSlots = await BookedSlot.find({
             instructorId,
             date: { $in: datesToCheck }, 
+            status: { $in: ["pending", "confirmed"]}
         });
 
         const bookedList = bookedSlots.map(slot => ({
             date: slot.date.toISOString().split("T")[0],
             startTime: slot.startTime,
             endTime: slot.endTime,
+            status: slot.status ,
         }));
 
         const isSlotAvailable = (date, startTime, endTime) => {
             return !bookedList.some(booked => {
                 return (
-                    booked.date === date &&
+                    booked.date === date && ["pending", "confirmed"].includes(booked.status) &&
                     !(
                         endTime <= booked.startTime || startTime >= booked.endTime
                     )
@@ -146,7 +148,7 @@ exports.ScheduledSlot=async(req,res)=>{
 try
   {  const studentId=req.user.id;
 
-    const scheduledSlot=await BookedSlot.find({studentId,isBooked: true });
+    const scheduledSlot=await BookedSlot.find({studentId,status: "confirmed" });
 
     res.status(200).json({scheduledSlot})}
     catch(error){
@@ -155,13 +157,31 @@ try
     }
 }
 
+
+
+exports.PendingSlot=async(req,res)=>{
+    try
+      {  const studentId=req.user.id;
+    
+        const scheduledSlot=await BookedSlot.find({studentId,status: "pending" });
+    
+        res.status(200).json({scheduledSlot})}
+        catch(error){
+            console.log(error);
+            res.status(500).json({ message: "Server error", error });
+        }
+    }
+
+    
+
+
 exports.previous= async (req, res) => {
     try {
         const studentId = req.user.id; 
 
         const previousInterview = await BookedSlot.find({
             studentId,
-            isBooked: false // // date: { $lt: new Date() }
+            status: "completed" // // date: { $lt: new Date() }
         }).populate("instructorId", "name email");
 
         if (previousInterview.length === 0) {

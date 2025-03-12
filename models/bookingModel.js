@@ -20,7 +20,12 @@ const BookedSlotSchema = new mongoose.Schema({
         required: true },  
     isBooked: { 
         type: Boolean, 
-        default: true } 
+        default: false },
+    status: { 
+            type: String, 
+            enum: ['pending', 'confirmed', 'completed', 'cancelled'], 
+            default: 'pending' 
+        }, 
 }, { timestamps: true });
 
 module.exports = mongoose.model('BookedSlot', BookedSlotSchema);

@@ -32,3 +32,65 @@ else { %>
                 <% } %>
             </div>
         </section> -->
+
+
+
+
+
+
+
+
+
+
+        const Schedule = require("../models/Schedule");
+const User = require("../models/User"); // Import User model to check role
+
+const createSlots = async (req, res) => {
+    try {
+        const { slots } = req.body;
+        const instructorId = req.user.id; // Extracted from token
+
+        if (!slots || !Array.isArray(slots) || slots.length === 0) {
+            return res.status(400).json({ message: "Slots are required" });
+        }
+
+        // Validate slots format
+        for (const slot of slots) {
+            if (!slot.startTime || !slot.endTime) {
+                return res.status(400).json({ message: "Each slot must have startTime and endTime" });
+            }
+        }
+
+        // Check if the user is an instructor
+        const instructor = await User.findById(instructorId);
+        if (!instructor || instructor.role !== "instructor") {
+            return res.status(403).json({ message: "Only instructors can create slots" });
+        }
+
+        // Find or create schedule
+        let schedule = await Schedule.findOne({ instructor: instructorId });
+
+        if (schedule) {
+            // Prevent duplicate slots
+            const existingSlotSet = new Set(schedule.slots.map(slot => `${slot.startTime}-${slot.endTime}`));
+            const newSlots = slots.filter(slot => !existingSlotSet.has(`${slot.startTime}-${slot.endTime}`));
+
+            if (newSlots.length > 0) {
+                schedule.slots.push(...newSlots);
+                await schedule.save();
+                return res.status(201).json({ message: "New slots added successfully", schedule });
+            } else {
+                return res.status(200).json({ message: "No new slots to add", schedule });
+            }
+        } else {
+            // Create new schedule
+            schedule = new Schedule({ instructor: instructorId, slots });
+            await schedule.save();
+            return res.status(201).json({ message: "Slots created successfully", schedule });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error });
+    }
+};
+
+module.exports = { createSlots };
